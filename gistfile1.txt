@@ -1,0 +1,73 @@
+
+###########################
+### RUN ON YOUR MACHINE ###
+###########################
+
+## Install qemu-static
+dnf install qemu-user-static
+systemctl restart systemd-binfmt
+
+
+## Mount the rootfs
+parted sd-blob-b01.img
+> unit B
+> p
+
+ - Take note of the start position of the rootfs
+
+mount -o loop,offset=12582912 sd-blob-b01.img /mnt
+cd /mnt
+
+## Chroot
+
+mount -t proc proc proc/
+mount --rbind /sys sys/
+mount --rbind /dev dev/
+
+chroot ./
+
+##############################
+### RUN ON THE JETSON ROOTFS #
+##############################
+
+## Software
+apt update
+apt upgrade
+apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev
+pip3 install virtualenvwrapper
+
+## Jetson user
+
+useradd jetson
+echo "jetson:jetson" | chpasswd
+chsh jetson -s /bin/bash
+cp /etc/skel/.bash* /etc/skel/.profile /etc/skel/.xsessionrc /home/jetson/
+source /usr/local/bin/virtualenvwrapper.sh
+su - jetson
+
+
+## Virtualenv
+
+echo "source /usr/local/bin/virtualenvwrapper.sh" >> .bashrc
+export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
+source .bashrc
+
+mkvirtualenv donkey1
+echo "workon donkey1" >> .bashrc
+source .bashrc
+
+## Install donkeycar
+
+cd
+git clone https://github.com/castortut/donkeycar.git
+cd donkeycar
+git checkout master
+
+pip install -e .[nano]
+pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v42 tensorflow-gpu==1.14.0+nv19.9
+pip install matplotlib
+
+## Download mycar
+cd
+git clone https://github.com/castortut/donkey_mycar.git mycar; 
+cd mycar
