@@ -39,6 +39,7 @@ pip3 install virtualenvwrapper
 ## Jetson user
 
 useradd jetson
+usermod -aG sudo jetson
 echo "jetson:jetson" | chpasswd
 chsh jetson -s /bin/bash
 cp /etc/skel/.bash* /etc/skel/.profile /etc/skel/.xsessionrc /home/jetson/
@@ -48,8 +49,8 @@ su - jetson
 
 ## Virtualenv
 
+echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3" >> .bashrc
 echo "source /usr/local/bin/virtualenvwrapper.sh" >> .bashrc
-export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 source .bashrc
 
 mkvirtualenv donkey1
