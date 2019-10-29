@@ -117,10 +117,17 @@ git checkout master
 ## and install them before running the following
 
 pip install -e .[nano]
-pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v42 tensorflow-gpu==1.14.0+nv19.9
 pip install matplotlib
 
 ## Download mycar
 cd
 git clone https://github.com/castortut/donkey_mycar.git mycar; 
 cd mycar
+
+#######################
+### POST FIRST-BOOT ###
+#######################
+
+## This requires more space than the 12GB image has left so do it after copying to an SD card and resizing the filesystem:
+
+pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v42 tensorflow-gpu==1.14.0+nv19.9
