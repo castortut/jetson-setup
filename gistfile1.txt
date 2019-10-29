@@ -73,6 +73,10 @@ EOF
 ## Set a temporary DNS server, will get overwritten when full system is running
 echo nameserver 8.8.8.8 > /etc/resolv.conf
 
+## Set a locale to avoid some warnings. Also make it permanent
+export LC_ALL=en_DK.UTF-8 LANG=en_DK.UTF-8
+update-locale LANG=en_DK.UTF-8
+
 apt update
 
 ## Restore some missing things like man-pages
@@ -89,7 +93,7 @@ pip3 install virtualenvwrapper
 
 ## Create the user and set a basic password
 
-useradd -m -G sudo -s /bin/bash jetson
+useradd -m -G sudo,gdm,video -s /bin/bash jetson
 echo "jetson:jetson" | chpasswd
 
 ### The rest we run as the jetson user:
