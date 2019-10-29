@@ -30,14 +30,19 @@ chroot ./
 ### RUN ON THE JETSON ROOTFS #
 ##############################
 
-echo "nameserver 8.8.8.8 > /etc/resolv.conf"
+echo nameserver 8.8.8.8 > /etc/resolv.conf
 
 mkdir /usr/lib/ubiquity/plugins.disabled
 mv /usr/lib/ubiquity/plugins/nvlicense.py /usr/lib/ubiquity/plugins/ubi-usersetup.py /usr/lib/ubiquity/plugins.disabled/
 
+# Hack because I can't figure out how to preconfigure/skip the language selection screen
+sed -i 's/return localechooser_script, questions, environ/return localechooser_script, [], environ/' /usr/lib/ubiquity/plugins/ubi-language.py
+
 ## Prepare debconf:
 cat <<EOF >/preseed.cfg
-d-i debian-installer/locale string en_DK.UTF-8
+d-i auto-install/enable boolean true
+d-i localechooser/languagelist string English
+d-i debian-installer/locale string en_US
 d-i keyboard-configuration/xkb-keymap select fi
 d-i keyboard-configuration/layoutcode string fi
 d-i keyboard-configuration/variantcode string
@@ -49,6 +54,7 @@ mkdir /etc/systemd/system/nv-oem-config-gui.service.d
 cat <<EOF >//etc/systemd/system/nv-oem-config-gui.service.d/auto.conf
 [Service]
 # Override ExecStart
+ExecStart=
 ExecStart=/bin/sh -ec '\
     debconf-set-selections /preseed.cfg; \
     exec nv-oem-config-firstboot --automatic'
@@ -56,6 +62,7 @@ EOF
 
 ## Software
 apt update
+unminimize
 apt upgrade
 apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev
 pip3 install virtualenvwrapper
