@@ -21,8 +21,8 @@ cd /mnt
 ## Chroot
 
 mount -t proc proc proc/
-mount --rbind /sys sys/
-mount --rbind /dev dev/
+mount -t sysfs sysfs sys/
+mount -t devtmpfs devtmpfs dev/
 
 chroot ./
 
@@ -38,12 +38,9 @@ pip3 install virtualenvwrapper
 
 ## Jetson user
 
-useradd jetson
-usermod -aG sudo jetson
+useradd -m -G sudo -s /bin/bash jetson
 echo "jetson:jetson" | chpasswd
-chsh jetson -s /bin/bash
-cp /etc/skel/.bash* /etc/skel/.profile /etc/skel/.xsessionrc /home/jetson/
-source /usr/local/bin/virtualenvwrapper.sh
+
 su - jetson
 
 
