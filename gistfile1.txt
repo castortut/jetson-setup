@@ -32,6 +32,9 @@ chroot ./
 
 echo "nameserver 8.8.8.8 > /etc/resolv.conf"
 
+mkdir /usr/lib/ubiquity/plugins.disabled
+mv /usr/lib/ubiquity/plugins/nvlicense.py /usr/lib/ubiquity/plugins/ubi-usersetup.py /usr/lib/ubiquity/plugins.disabled/
+
 ## Prepare debconf:
 cat <<EOF >/preseed.cfg
 d-i debian-installer/locale string en_DK.UTF-8
@@ -39,7 +42,6 @@ d-i keyboard-configuration/xkb-keymap select fi
 d-i keyboard-configuration/layoutcode string fi
 d-i keyboard-configuration/variantcode string
 d-i time/zone string Europe/Helsinki
-d-i passwd/make-user boolean false
 EOF
 
 mkdir /etc/systemd/system/nv-oem-config-gui.service.d
