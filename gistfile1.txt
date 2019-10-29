@@ -30,6 +30,28 @@ chroot ./
 ### RUN ON THE JETSON ROOTFS #
 ##############################
 
+echo "nameserver 8.8.8.8 > /etc/resolv.conf"
+
+## Prepare debconf:
+cat <<EOF >/preseed.cfg
+d-i debian-installer/locale string en_DK.UTF-8
+d-i keyboard-configuration/xkb-keymap select fi
+d-i keyboard-configuration/layoutcode string fi
+d-i keyboard-configuration/variantcode string
+d-i time/zone string Europe/Helsinki
+d-i passwd/make-user boolean false
+EOF
+
+mkdir /etc/systemd/system/nv-oem-config-gui.service.d
+
+cat <<EOF >//etc/systemd/system/nv-oem-config-gui.service.d/auto.conf
+[Service]
+# Override ExecStart
+ExecStart=/bin/sh -ec '\
+    debconf-set-selections /preseed.cfg; \
+    exec nv-oem-config-firstboot --automatic'
+EOF
+
 ## Software
 apt update
 apt upgrade
