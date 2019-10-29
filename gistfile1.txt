@@ -3,22 +3,27 @@
 ### RUN ON YOUR MACHINE ###
 ###########################
 
+### Prepairing your machine to run ARM binaries
+
 ## Install qemu-static
 dnf install qemu-user-static
 systemctl restart systemd-binfmt
 
 
-## Mount the rootfs
+###  Mount the rootfs
+
+## Find the partition offset
+
 parted sd-blob-b01.img
 > unit B
 > p
 
  - Take note of the start position of the rootfs
 
+## Mount the root filesystem and some necessary virtual filesystems, then chroot
+
 mount -o loop,offset=12582912 sd-blob-b01.img /mnt
 cd /mnt
-
-## Chroot
 
 mount -t proc proc proc/
 mount -t sysfs sysfs sys/
@@ -30,15 +35,17 @@ chroot ./
 ### RUN ON THE JETSON ROOTFS #
 ##############################
 
-echo nameserver 8.8.8.8 > /etc/resolv.conf
+### Automated install
 
+## Remove some unnecessary firstboot-wizard plugins. We don't want to manually accept the nv license every time
+## and we create the user manually
 mkdir /usr/lib/ubiquity/plugins.disabled
 mv /usr/lib/ubiquity/plugins/nvlicense.py /usr/lib/ubiquity/plugins/ubi-usersetup.py /usr/lib/ubiquity/plugins.disabled/
 
 # Hack because I can't figure out how to preconfigure/skip the language selection screen
 sed -i 's/return localechooser_script, questions, environ/return localechooser_script, [], environ/' /usr/lib/ubiquity/plugins/ubi-language.py
 
-## Prepare debconf:
+## Prepare debconf for automated config:
 cat <<EOF >/preseed.cfg
 d-i auto-install/enable boolean true
 d-i localechooser/languagelist string English
@@ -49,33 +56,47 @@ d-i keyboard-configuration/variantcode string
 d-i time/zone string Europe/Helsinki
 EOF
 
-mkdir /etc/systemd/system/nv-oem-config-gui.service.d
+## Load the preseed answers and add --automatic to nv-oem-config-firstboot
 
+mkdir /etc/systemd/system/nv-oem-config-gui.service.d
 cat <<EOF >//etc/systemd/system/nv-oem-config-gui.service.d/auto.conf
 [Service]
-# Override ExecStart
+# ExecStart is additive, so clear first
 ExecStart=
 ExecStart=/bin/sh -ec '\
     debconf-set-selections /preseed.cfg; \
     exec nv-oem-config-firstboot --automatic'
 EOF
 
-## Software
+### Software
+
+## Set a temporary DNS server, will get overwritten when full system is running
+echo nameserver 8.8.8.8 > /etc/resolv.conf
+
 apt update
+
+## Restore some missing things like man-pages
 unminimize
+
+## Upgrade packages and install some tools and libraries we'll need later on
+
 apt upgrade
 apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev
 pip3 install virtualenvwrapper
 
-## Jetson user
+
+### Jetson user
+
+## Create the user and set a basic password
 
 useradd -m -G sudo -s /bin/bash jetson
 echo "jetson:jetson" | chpasswd
 
+### The rest we run as the jetson user:
+
 su - jetson
 
-
-## Virtualenv
+## set up the virtualenv
 
 echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3" >> .bashrc
 echo "source /usr/local/bin/virtualenvwrapper.sh" >> .bashrc
@@ -91,6 +112,9 @@ cd
 git clone https://github.com/castortut/donkeycar.git
 cd donkeycar
 git checkout master
+
+## It is recommended to find a set of wheels (prebuilt binaries) for the libraries with binary extensions
+## and install them before running the following
 
 pip install -e .[nano]
 pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v42 tensorflow-gpu==1.14.0+nv19.9
