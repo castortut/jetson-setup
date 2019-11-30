@@ -90,7 +90,7 @@ unminimize
 ## Upgrade packages and install some tools and libraries we'll need later on
 
 apt upgrade
-apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev
+apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev htop rsync screen
 pip3 install virtualenvwrapper
 
 
