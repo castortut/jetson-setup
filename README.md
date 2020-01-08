@@ -8,6 +8,11 @@ dnf install qemu-user-static
 systemctl restart systemd-binfmt
 ```
 
+## Resize image to fit later installations
+```
+qemu-img resize sd-blob-b01.img 30G
+```
+
 ##  Mount the rootfs
 
 ### Find the partition offset
@@ -25,7 +30,14 @@ parted sd-blob-b01.img
 ```
 mount -o loop,offset=12582912 sd-blob-b01.img /mnt
 cd /mnt
-
+```
+If you resized the image earlier:
+After mounting, check with lsblk which loop we mounted on, and resize the filesystem to that loop (X).
+```
+resize2fs /dev/loopX
+```
+Mount the rest and chroot.
+```
 # The following might be needed, at least if you get "/bin/bash: no such file or directory" on chroot
 cp /usr/bin/qemu-aarch64-static usr/bin/
 
@@ -101,13 +113,6 @@ apt update
 unminimize
 ```
 
-### Upgrade packages and install some tools and libraries we'll need later on
-```
-apt upgrade
-apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev htop rsync screen
-pip3 install virtualenvwrapper
-```
-
 ## Jetson user
 
 ### Create the user and set a basic password
@@ -115,47 +120,38 @@ pip3 install virtualenvwrapper
 useradd -m -G sudo,gdm,video -s /bin/bash jetson
 echo "jetson:jetson" | chpasswd
 ```
+### Don't require sudo password for jetson user
+```
+visudo
+```
+Add this to the end of the opened sudoers file as its own line:
+
+```
+jetson ALL=(ALL) NOPASSWD: ALL
+```
 ### The rest we run as the jetson user:
 ```
 su - jetson
 ```
-
-### set up the virtualenv
-```
-echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3" >> .bashrc
-echo "source /usr/local/bin/virtualenvwrapper.sh" >> .bashrc
-source .bashrc
-
-mkvirtualenv donkey1
-echo "workon donkey1" >> .bashrc
-source .bashrc
-```
-
-### Install donkeycar
-```
-cd
-git clone https://github.com/castortut/donkeycar.git
-cd donkeycar
-git checkout master
-```
-
-### It is recommended to find a set of wheels (prebuilt binaries) for the libraries with binary extensions and install them before running the following
-```
-pip install -e .[nano]
-pip install matplotlib
-```
-
-## Download mycar
-```
-cd
-git clone https://github.com/castortut/donkey_mycar.git mycar; 
-cd mycar
-```
-
-# POST FIRST-BOOT #
-
-## This requires more space than the 12GB image has left so do it after copying to an SD card and resizing the filesystem:
+### Run installation script for OpenCV, librealsense and donkeycar
+The script sets up a virtual environment, installs all dependencies and installs
+Jetson Nano compatible versions of OpenCV2, librealsense2 and donkeycar.
 
 ```
-pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v42 tensorflow-gpu==1.14.0+nv19.9
+cd scripts
+chmod +x donkeyinstalls.sh install_opencv.sh install_librealsense.sh
+./donkeyinstalls.sh -e donkey
 ```
+
+## Write the file to SD card
+
+Find the SD card device (probably /dev/sda1)
+```
+sudo fdisk -l
+```
+Unmount the partitions and flash your image to the card
+```
+sudo umount /dev/sdx*
+sudo dd bs=1M if=sd-blob-b01.img of=/dev/sdx*
+```
+After booting, resize to card size and remove the added sudoers line with visudo
