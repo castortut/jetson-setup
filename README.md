@@ -1,3 +1,7 @@
+# JETSON SETUP
+
+These instructions go through setting up a Jetson Nano image in a qemu emulation on Linux. First, the image is mounted so that we can run arch instructions inside it. Then, we perform first boot setup and create a user, and finally install OpenCV, librealsense (for Intel Realsense cameras) and donkeycar libraries.
+
 # RUN ON YOUR MACHINE
 
 ## Prepairing your machine to run ARM binaries
@@ -5,6 +9,8 @@
 ### Install qemu-static
 ```
 dnf install qemu-user-static
+# OR
+# apt install qemu-user-static
 systemctl restart systemd-binfmt
 ```
 
@@ -105,7 +111,7 @@ update-locale LANG=en_DK.UTF-8
 TODO: Fix the Nvidia repo which at this point has a <SOC> placeholder
 
 ```
-apt update
+apt update && apt -y upgrade
 ```
 
 ### Restore some missing things like man-pages
@@ -134,7 +140,9 @@ jetson ALL=(ALL) NOPASSWD: ALL
 su - jetson
 ```
 ### Run installation script for OpenCV, librealsense and donkeycar
-The script sets up a virtual environment, installs all dependencies and installs
+- Copy 'scripts' folder to /home/jetson/ in the image
+
+The donkeyinstalls.sh script sets up a virtual environment, installs all dependencies and installs
 Jetson Nano compatible versions of OpenCV2, librealsense2 and donkeycar.
 
 ```
@@ -143,7 +151,9 @@ chmod +x donkeyinstalls.sh install_opencv.sh install_librealsense.sh
 ./donkeyinstalls.sh -e donkey
 ```
 
-## Write the file to SD card
+# Write the file to SD card
+
+At least 32GB card is needed, 64GB preferred. Speed does not matter, as long as it is at least UHS-I.
 
 Find the SD card device (probably /dev/sda1)
 ```
