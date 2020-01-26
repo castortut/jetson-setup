@@ -38,16 +38,26 @@
       src: "/etc/systemd/system/nvresizefs.service"
       state: link
 
-  - name: "Check if the locale has been changed"
-    command: grep -Fq 'en_US' /etc/default/locale
-    register: default_locale
-    check_mode: no # always run
-    failed_when: no
-    changed_when: no
+  - name: "Set locale"
+    copy:
+      dest: /etc/default/locale
+      content: |
+        LANG=en_DK.UTF-8
 
-  - name: "Change locale"
-    command: update-locale LANG=en_DK.UTF-8
-    when: default_locale.rc == 0
+  - name: "Console keyboard layout"
+    copy:
+      dest: /etc/vconsole.conf
+      content: |
+        KEYMAP=fi
+
+  - name: "X11 keyboard layout"
+    copy:
+      dest: /etc/default/keyboard
+      content: |
+        XKBMODEL=pc105
+        XKBLAYOUT=fi
+        XKBOPTIONS=terminate:ctrl_alt_bksp
+        BACKSPACE=guess
 
   - name: "Remove excludes to include documentation"
     copy:
