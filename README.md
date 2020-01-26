@@ -32,35 +32,43 @@ cp /usr/bin/qemu-aarch64-static usr/bin/
 mount -t proc proc proc/
 mount -t sysfs sysfs sys/
 mount -t devtmpfs devtmpfs dev/
+mount -t devpts devpts dev/pts/
 
 chroot ./
 ```
 
 # RUN ON THE JETSON ROOTFS
 
-## Automated install
-
+## Automated setup
 
 ### Set a temporary DNS server, will get overwritten when full system is running
 ```
 echo nameserver 8.8.8.8 > /etc/resolv.conf
 ```
-### TODO: Run ansible
+
+### Install ansible
+```
+apt update
+apt upgrade
+apt install python3-pip
+pip3 install ansible
+```
+
+### Download this repo and run
+```
+git clone https://github.com/castortut/jetson-setup
+cd jetson-setup
+ansible-playbook customization.yaml
+```
+
+## Donkeycar
 
 ### Upgrade packages and install some tools and libraries we'll need later on
 ```
-apt upgrade
-apt install python3-pip git libjpeg-dev libhdf5-dev libfreetype6-dev htop rsync screen
+apt install libjpeg-dev libhdf5-dev libfreetype6-dev
 pip3 install virtualenvwrapper
 ```
 
-## Jetson user
-
-### Create the user and set a basic password
-```
-useradd -m -G sudo,gdm,video -s /bin/bash jetson
-echo "jetson:jetson" | chpasswd
-```
 ### The rest we run as the jetson user:
 ```
 su - jetson
