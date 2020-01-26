@@ -6,26 +6,111 @@
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD0eTzvYXj4ddqxz49CJsUBYD4wjLfhj6Py/AHKVPLEtq7hB2AeY+OLkkyDoDTC+mBIPgbS6aB2rGrc2vGM7q2w4Nw3a/rcXS5IIncMWlrznLd0E0r84OGdwQbGWfAP3RUX5pxRoykCHeE9hHpjN3xF0IM/RPgXNz+H5Z1325SSYTEorQ9JI6E75eQk/r9/aWF2yoZeFwLc5FDG6AQylHGNiiNeqMrR11TvbPomXd3H7zXgdwem+Egz23BNLt8TldrugzYj1vlx1qBazpHTbf95xpZGaMWiBcmo+Uy2BiVft5gO7YAl0et4japJYS2eQE0N5T0pJoIlWDz5ns2phVZt esa@x1y3
 
   tasks:
+  # Prepare first boot
+  - name: "Disable some installer plugins to prevent unnecessary interruptions"
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+    - /usr/lib/ubiquity/plugins/nvlicense.py
+    - /usr/lib/ubiquity/plugins/ubi-usersetup.py
+    - /usr/lib/ubiquity/plugins/ubi-language.py
+
+  - name: "Create preseed configuration"
+    copy:
+      dest: "/preseed.cfg"
+      content: |
+        d-i auto-install/enable boolean true
+        d-i localechooser/languagelist string English
+        d-i debian-installer/locale string fi_FI
+        d-i keyboard-configuration/xkb-keymap select fi
+        d-i keyboard-configuration/layoutcode string fi
+        d-i keyboard-configuration/variantcode string
+        d-i time/zone string Europe/Helsinki
+
+  - name: "Create drop-in directory for nv-oem-config-gui.service"
+    file:
+      state: directory
+      path: /etc/systemd/system/nv-oem-config-gui.service.d
+
+  - name: "Use preloaded answers for nv-oem-config-firstboot"
+    copy:
+      dest: /etc/systemd/system/nv-oem-config-gui.service.d/auto.conf
+      content: |
+        [Service]
+        # ExecStart is additive, so clear first
+        ExecStart=
+        ExecStart=/bin/sh -ec '\
+            debconf-set-selections /preseed.cfg; \
+            exec nv-oem-config-firstboot --automatic'
+
+  - name: "Check if the locale has been changed"
+    command: grep -Fq 'en_US' /etc/default/locale
+    register: default_locale
+    check_mode: no # always run
+    ignore_errors: yes # string not found -> error
+    changed_when: no
+
+  - name: "Change locale"
+    command: update-locale LANG=en_DK.UTF-8
+    when: default_locale.rc == 0
+
+  - name: "Remove excludes to include documentation"
+    copy:
+      dest: /etc/dpkg/dpkg.cfg.d/excludes
+      content: ''
+    register: remove_excludes
+
+  - name: "Reinstall packages with missing documentation"
+    when: remove_excludes.changed
+    shell: |
+      # Reinstallation takes place in two steps because a single dpkg --verified
+      # command generates very long parameter list for "xargs dpkg -S" and may go
+      # over ARG_MAX. Since many packages have man pages the second download
+      # handles a much smaller amount of packages.
+      dpkg -S /usr/share/man/ |sed 's|, |\n|g;s|: [^:]*$||' | DEBIAN_FRONTEND=noninteractive xargs apt-get install --reinstall -y
+      echo "Reinstalling packages with system documentation in /usr/share/doc/ .."
+      # This step processes the packages which still have missing documentation
+      dpkg --verify --verify-format rpm | awk '/..5......   \/usr\/share\/doc/ {print $2}' | sed 's|/[^/]*$||' | sort |uniq \
+           | xargs dpkg -S | sed 's|, |\n|g;s|: [^:]*$||' | uniq | DEBIAN_FRONTEND=noninteractive xargs apt-get install --reinstall -y
+
+  - name: "Install useful software"
+    apt:
+      pkg:
+        - htop
+        - rsync
+        - screen
+        - tmux
+
+  - name: "Create default user"
+    user:
+      name: jetson
+      password: "$6$salt$MJznBo5SCG.t/gLu4bwlaE9foMvdFFsVJVlq2YRx3PaRvILYhA5V4nRtzc8yb5c1WwiLCqAvTdYQBbom7DmYq/" # jetson
+      groups: 
+      - gdm
+      - sudo
+      - video
+
   - name: "Enable passwordless sudo"
     lineinfile:
       path: /etc/sudoers
       regexp: '%sudo.*'
       line: '%sudo	ALL=(ALL:ALL) NOPASSWD: ALL'
 
-  - file:
+  - name: "Create override directory for getty@tty1.service"
+    file:
       path: /etc/systemd/system/getty@tty1.service.d
       state: directory
 
   - name: "Set multi-user.target as default target"
     file:
       path: /etc/systemd/system/default.target
-      src: /lib/systemd/system/graphical.target
+      src: /lib/systemd/system/multi-user.target
       state: link
 
   - name: "Enable autologin on console"
-    file:
-      path: /etc/systemd/system/getty@tty1.service.d/override.conf
-      state: file
+    copy:
+      dest: /etc/systemd/system/getty@tty1.service.d/override.conf
       content: |
         [Service]
         ExecStart=

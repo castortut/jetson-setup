@@ -40,66 +40,12 @@ chroot ./
 
 ## Automated install
 
-### Remove some unnecessary firstboot-wizard plugins. We don't want to manually accept the nv license every time and we create the user manually
-```
-mkdir /usr/lib/ubiquity/plugins.disabled
-mv /usr/lib/ubiquity/plugins/nvlicense.py /usr/lib/ubiquity/plugins/ubi-usersetup.py /usr/lib/ubiquity/plugins.disabled/
-```
-
-### Hack because I can't figure out how to preconfigure/skip the language selection screen
-```
-sed -i 's/return localechooser_script, questions, environ/return localechooser_script, [], environ/' /usr/lib/ubiquity/plugins/ubi-language.py
-```
-
-### Prepare debconf for automated config:
-```
-cat <<EOF >/preseed.cfg
-d-i auto-install/enable boolean true
-d-i localechooser/languagelist string English
-d-i debian-installer/locale string en_US
-d-i keyboard-configuration/xkb-keymap select fi
-d-i keyboard-configuration/layoutcode string fi
-d-i keyboard-configuration/variantcode string
-d-i time/zone string Europe/Helsinki
-EOF
-```
-
-### Load the preseed answers and add --automatic to nv-oem-config-firstboot
-```
-mkdir /etc/systemd/system/nv-oem-config-gui.service.d
-cat <<EOF >//etc/systemd/system/nv-oem-config-gui.service.d/auto.conf
-[Service]
-# ExecStart is additive, so clear first
-ExecStart=
-ExecStart=/bin/sh -ec '\
-    debconf-set-selections /preseed.cfg; \
-    exec nv-oem-config-firstboot --automatic'
-EOF
-```
-
-## Software
 
 ### Set a temporary DNS server, will get overwritten when full system is running
 ```
 echo nameserver 8.8.8.8 > /etc/resolv.conf
 ```
-
-### Set a locale to avoid some warnings. Also make it permanent
-```
-export LC_ALL=en_DK.UTF-8 LANG=en_DK.UTF-8
-update-locale LANG=en_DK.UTF-8
-```
-
-TODO: Fix the Nvidia repo which at this point has a <SOC> placeholder
-
-```
-apt update
-```
-
-### Restore some missing things like man-pages
-```
-unminimize
-```
+### TODO: Run ansible
 
 ### Upgrade packages and install some tools and libraries we'll need later on
 ```
