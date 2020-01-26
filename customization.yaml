@@ -42,7 +42,7 @@
     command: grep -Fq 'en_US' /etc/default/locale
     register: default_locale
     check_mode: no # always run
-    ignore_errors: yes # string not found -> error
+    failed_when: no
     changed_when: no
 
   - name: "Change locale"
