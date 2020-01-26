@@ -80,6 +80,7 @@
     user:
       name: jetson
       password: "$6$salt$MJznBo5SCG.t/gLu4bwlaE9foMvdFFsVJVlq2YRx3PaRvILYhA5V4nRtzc8yb5c1WwiLCqAvTdYQBbom7DmYq/" # jetson
+      shell: "/bin/bash"
       groups: 
       - gdm
       - sudo
